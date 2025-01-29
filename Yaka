@@ -1,0 +1,275 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/AshleyCanis/Orion-lib/refs/heads/main/Orion')))()
+local fakeValues = {
+    WalkSpeed = 16,
+    JumpPower = 50
+}
+local enabledProperties = {
+    WalkSpeed = false,
+    JumpPower = false
+}
+local oldIndex
+
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+    if tostring(self) == "Humanoid" and enabledProperties[key] then
+        if fakeValues[key] then
+            return fakeValues[key]
+        end
+    end
+    return oldIndex(self, key)
+end)
+
+OrionLib:MakeNotification({
+    Name = "Disclaimer",
+    Content = "Works only if anti-cheat checks WalkSpeed/JumpPower values.",
+    Image = "rbxassetid://45tv483345998",
+    Time = 3
+})
+
+task.wait(3)
+
+OrionLib:MakeNotification({
+    Name = "Important Note",
+    Content = "Won't work if anti-cheat monitors hook functions.",
+    Image = "rbxassetid://4483345998",
+    Time = 3
+})
+
+task.wait(3)
+
+OrionLib:MakeNotification({
+    Name = "Limitations",
+    Content = "Client-side only; doesn't affect the server.",
+    Image = "rbxassetid://4483345998",
+    Time = 3
+})
+
+task.wait(3)
+
+OrionLib:MakeNotification({
+    Name = "Test Environment",
+    Content = "Go to the game: https://www.roblox.com/games/130999049368928/SecureRemoteEvent",
+    Image = "rbxassetid://4483345998",
+    Time = 3
+})
+
+task.wait(3)
+
+if game.PlaceId == 130999049368928 then
+    OrionLib:MakeNotification({
+        Name = "Test Instructions",
+        Content = "You are in the test game. Touch the green part to set your speed to 100. Use the hub to fake it. If faked, you won't be kicked.",
+        Image = "rbxassetid://4483345998",
+        Time = 9
+    })
+end
+
+task.wait(10)
+
+local Window = OrionLib:MakeWindow({Name = "COLA HUB | گوله هوب", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionConfig"})
+
+local MainTab = Window:MakeTab({
+    Name = "Main | قائمة الرئيسية",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- Function to get all player names
+local function getPlayerNames()
+    local playerNames = {}
+    for _, player in ipairs(game.Players:GetPlayers()) do
+        table.insert(playerNames, player.Name)
+    end
+    return playerNames
+end
+
+-- Store selected player for later use
+local selectedPlayer = nil
+local followHead = false
+local connection = nil
+
+-- Function to spectate the selected player
+local function spectatePlayer(enable)
+    local player = game.Players.LocalPlayer
+    local camera = workspace.CurrentCamera
+
+    if selectedPlayer then
+        local targetPlayer = game.Players:FindFirstChild(selectedPlayer)
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            if enable then
+                -- Set camera to follow the selected player
+                camera.CameraSubject = targetPlayer.Character.Humanoid
+            else
+                -- Reset camera to default (back to the local player)
+                camera.CameraSubject = player.Character.Humanoid
+            end
+        else
+
+            print("Selected player not available or out of game.")
+        end
+    else
+        print("No player selected!")
+    end
+end
+
+-- Function to float just above the selected player's head without falling
+local function floatAbovePlayerHead()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = character.HumanoidRootPart
+
+        if selectedPlayer then
+            local targetPlayer = game.Players:FindFirstChild(selectedPlayer)
+
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                local targetHead = targetPlayer.Character.Head
+
+                -- Position above the selected player's head
+                humanoidRootPart.CFrame = targetHead.CFrame * CFrame.new(0, 3, 0)
+
+                -- Keep updating the position every frame
+                connection = game:GetService("RunService").Heartbeat:Connect(function()
+                    if followHead and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                        -- Update to stay above the player's head
+                        humanoidRootPart.CFrame = targetPlayer.Character.Head.CFrame * CFrame.new(0, 3, 0)
+                    else
+                        connection:Disconnect() -- Disconnect if the toggle is off
+                    end
+                end)
+            else
+                print("Target player not found or not in the game.")
+            end
+        else
+            print("No player selected!")
+        end
+    end
+end
+-- Function to trigger the secondary script
+local function triggerCharacterSizeDown()
+    local args = {
+        [1] = "CharacterSizeDown",
+        [2] = 2.4
+    }
+    game:GetService("ReplicatedStorage").RE:FindFirstChild("1Clothe1s"):FireServer(unpack(args))
+end
+
+-- Function to teleport behind the selected player and return after 1.5 seconds
+local function moveBehindAndReturn()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart and selectedPlayer then
+        local targetPlayer = game.Players:FindFirstChild(selectedPlayer)
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHumanoidRootPart = targetPlayer.Character.HumanoidRootPart
+
+            -- Store the original position
+            local originalPosition = humanoidRootPart.CFrame
+
+            -- Move behind the selected player
+            humanoidRootPart.CFrame = targetHumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+
+            -- Wait for 1.5 seconds before returning
+            wait(1.5)
+
+            -- Return to original position
+            humanoidRootPart.CFrame = originalPosition
+        else
+            print("Selected player not found or not in the game.")
+        end
+    else
+        print("No player or HumanoidRootPart found!")
+    end
+end
+-- Create the dropdown with player names
+Tab:AddDropdown({
+    Name = "اختار الاعب",
+    Default = "",
+    Options = getPlayerNames(),
+    Callback = function(value)
+        selectedPlayer = value
+        print("Player selected: " .. value)
+    end    
+})
+
+-- Add a toggle that allows the player to spectate the selected player
+Tab:AddToggle({
+    Name = "شوف الاعب",
+    Default = false,
+    Callback = function(value)
+        spectatePlayer(value)
+    end    
+})
+
+-- Add a second toggle to start floating above the selected player's head
+Tab:AddToggle({
+    Name = "تحكم في شات الاعب",
+    Default = false,
+    Callback = function(value)
+        followHead = value
+        if followHead then
+            -- Teleport to player's head first
+            floatAbovePlayerHead()
+            -- Trigger the secondary script
+            triggerCharacterSizeDown()
+        else
+            if connection then
+                connection:Disconnect() -- Disconnect the heartbeat listener when not following
+                connection = nil
+            end
+        end
+    end    
+})
+
+-- Add a button to teleport to the selected player
+Tab:AddButton({
+    Name = "روح عند الاعب",
+    Callback = function()
+        floatAbovePlayerHead()
+    end    
+})
+
+-- Add a button to move behind the selected player and return after 1.5 seconds
+Tab:AddButton({
+    Name = "اسحب الاعب",
+    Callback = function()
+        moveBehindAndReturn()
+    end    
+})
+-- Function to teleport behind the selected player and then move to a fixed position
+local function moveBehindThenTeleportToFixedPosition()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local teleportPosition = Vector3.new(0.9995850324630737, -489.0882873535156, 1.0034377574920654)
+
+    if humanoidRootPart and selectedPlayer then
+        local targetPlayer = game.Players:FindFirstChild(selectedPlayer)
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHumanoidRootPart = targetPlayer.Character.HumanoidRootPart
+
+            -- Move behind the selected player
+            humanoidRootPart.CFrame = targetHumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+
+            -- Wait for 1.1 seconds before teleporting to the fixed position
+            wait(1.1)
+
+            -- Teleport to the fixed position
+            humanoidRootPart.CFrame = CFrame.new(teleportPosition)
+        else
+            print("Selected player not found or not in the game.")
+        end
+    else
+        print("No player or HumanoidRootPart found!")
+    end
+end
+
+-- Add a new button to move behind the selected player and then teleport to a fixed position
+Tab:AddButton({
+    Name = "اقتل الاعب",
+    Callback = function()
+        moveBehindThenTeleportToFixedPosition()
+    end    
+})
